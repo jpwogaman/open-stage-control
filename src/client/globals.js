@@ -11,6 +11,11 @@ window.LANG = ENV.lang === 'debug' ? 'debug' : (ENV.lang || navigator.language |
 
 window.PACKAGE = require('../../package.json')
 
+
+//hard-coding absolute path will work, but it's not recommended - trying to get this file pulled in from the options window instead
+//window.KEYS = require('C:/.../Key Commands.json')
+
+
 window.LOADING = null
 
 window.READ_ONLY = window.READ_ONLY || false

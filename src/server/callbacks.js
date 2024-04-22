@@ -2,16 +2,15 @@ var path = require('path'),
     fs = require('fs'),
     settings = require('./settings'),
     osc = require('./osc'),
-    {ipc} = require('./server'),
-    {deepCopy, resolveHomeDir} = require('./utils'),
+    { ipc } = require('./server'),
+    { deepCopy, resolveHomeDir } = require('./utils'),
     child_process = require('child_process'),
     fragmentManager
 
 var widgetHashTable = {},
-    clipboard = {clipboard: null, idClipboard: null}
+    clipboard = { clipboard: null, idClipboard: null }
 
-module.exports =  {
-
+module.exports = {
     open(data, clientId) {
         // client connected
 
@@ -23,22 +22,25 @@ module.exports =  {
         ipc.send('clipboard', clipboard, clientId)
         ipc.send('serverTargets', settings.read('send'), clientId)
 
-        if (settings.read('load') && !data.hotReload) return this.sessionOpen({path: settings.read('load')}, clientId)
+        if (settings.read('load') && !data.hotReload) {
+            return this.sessionOpen({ path: settings.read('load') }, clientId)
+        }
 
+        if (settings.read('cubase-keys') && !data.hotReload) {
+            return this.keyCommandsToClient({ path: settings.read('cubase-keys') }, clientId)
+        }
     },
 
     close(data, clientId) {
         // client disconnected
-
     },
 
     created(data, clientId) {
         // client created or reconnected
 
-        if (!widgetHashTable[clientId])  {
-            widgetHashTable[clientId] = {CONSOLE: {typeTags: ''}}
+        if (!widgetHashTable[clientId]) {
+            widgetHashTable[clientId] = { CONSOLE: { typeTags: '' } }
         }
-
     },
 
     destroyed(data, clientId) {
@@ -46,7 +48,6 @@ module.exports =  {
 
         // clear osc data cache
         if (widgetHashTable[clientId]) delete widgetHashTable[clientId]
-
     },
 
     clipboard(data, clientId) {
@@ -54,21 +55,18 @@ module.exports =  {
 
         clipboard = data
         ipc.send('clipboard', data, null, clientId)
-
     },
 
     sessionAddToHistory(data) {
-
         var recentSessions = settings.read('recentSessions')
 
-        fs.lstat(data, (err, stats)=>{
-
+        fs.lstat(data, (err, stats) => {
             if (err || !stats.isFile()) return
 
             // add session to history
             recentSessions.unshift(path.resolve(data))
             // remove doubles from history
-            recentSessions = recentSessions.filter(function(elem, index, self) {
+            recentSessions = recentSessions.filter(function (elem, index, self) {
                 return index == self.indexOf(elem)
             })
 
@@ -79,19 +77,16 @@ module.exports =  {
             settings.write('recentSessions', recentSessions)
 
             ipc.send('sessionList', recentSessions)
-
         })
     },
 
     sessionRemoveFromHistory(data) {
-
         var recentSessions = settings.read('recentSessions')
         if (recentSessions.indexOf(data) > -1) {
-            recentSessions.splice(recentSessions.indexOf(data),1)
-            settings.write('recentSessions',recentSessions)
+            recentSessions.splice(recentSessions.indexOf(data), 1)
+            settings.write('recentSessions', recentSessions)
             ipc.send('sessionList', recentSessions)
         }
-
     },
 
     sessionSetPath(data, clientId) {
@@ -106,7 +101,6 @@ module.exports =  {
         ipc.clients[clientId].sessionPath = data.path
 
         ipc.send('setTitle', path.basename(data.path), clientId)
-
     },
 
     sessionOpen(data, clientId) {
@@ -114,17 +108,33 @@ module.exports =  {
 
         if (Array.isArray(data.path)) data.path = path.resolve(...data.path)
 
-        module.exports.fileRead(data, clientId, true, (result)=>{
+        module.exports.fileRead(
+            data,
+            clientId,
+            true,
+            (result) => {
+                ipc.clients[clientId].sessionPath = data.path // for resolving local file requests
+                ipc.send('sessionOpen', { path: data.path, fileContent: result }, clientId)
+            },
+            (error) => {
+                ipc.send('error', `Could not open session file:\n ${error}`)
+            }
+        )
+    },
+    keyCommandsToClient(data, clientId) {
+        if (Array.isArray(data.path)) data.path = path.resolve(...data.path)
 
-            ipc.clients[clientId].sessionPath = data.path // for resolving local file requests
-            ipc.send('sessionOpen', {path: data.path, fileContent: result}, clientId)
-
-        }, (error)=>{
-
-            ipc.send('error', `Could not open session file:\n ${error}`)
-
-        })
-
+        module.exports.fileRead(
+            data,
+            clientId,
+            true,
+            (result) => {
+                ipc.send('cubaseKeys', { path: data.path, fileContent: result }, clientId)
+            },
+            (error) => {
+                ipc.send('error', `Could not open Cubase Key Commands file:\n ${error}`)
+            }
+        )
     },
 
     fragmentLoad(data, clientId) {
@@ -135,7 +145,6 @@ module.exports =  {
         fragmentManager = fragmentManager || require('./fragment-manager')
 
         fragmentManager.loadFragment(data, clientId)
-
     },
 
     sessionOpened(data, clientId) {
@@ -163,8 +172,7 @@ module.exports =  {
 
         ipc.send('stateSend', null, null, clientId)
 
-        module.exports.sessionSetPath({path: data.path}, clientId)
-
+        module.exports.sessionSetPath({ path: data.path }, clientId)
     },
 
     fileRead(data, clientId, ok, callback, errorCallback) {
@@ -176,10 +184,9 @@ module.exports =  {
 
         data.path = resolveHomeDir(data.path)
 
-        if (!path.isAbsolute(data.path) && settings.read('remote-root')) data.path =  path.resolve(resolveHomeDir(settings.read('remote-root')), data.path)
+        if (!path.isAbsolute(data.path) && settings.read('remote-root')) data.path = path.resolve(resolveHomeDir(settings.read('remote-root')), data.path)
 
-        fs.readFile(data.path, 'utf8', (err, result)=>{
-
+        fs.readFile(data.path, 'utf8', (err, result) => {
             var error
 
             if (err) {
@@ -189,15 +196,13 @@ module.exports =  {
                     if (result[0] === '\ufeff') result = result.slice(1) // remove BOM
                     result = data.raw ? result : JSON.parse(result)
                     callback(result)
-                } catch(err) {
+                } catch (err) {
                     error = err
                 }
             }
 
             if (error && errorCallback) errorCallback(error)
-
         })
-
     },
 
     fileSave(data, clientId, ok, callback) {
@@ -205,62 +210,71 @@ module.exports =  {
 
         if (!ok) return
 
-        if (!data.path || settings.read('remote-saving') && !RegExp(settings.read('remote-saving')).test(ipc.clients[clientId].address)) {
-
-            return ipc.send('notify', {
-                icon: 'save',
-                locale: 'remotesave_forbidden',
-                class: 'error'
-            }, clientId)
-
+        if (!data.path || (settings.read('remote-saving') && !RegExp(settings.read('remote-saving')).test(ipc.clients[clientId].address))) {
+            return ipc.send(
+                'notify',
+                {
+                    icon: 'save',
+                    locale: 'remotesave_forbidden',
+                    class: 'error'
+                },
+                clientId
+            )
         }
 
         if (data.path) {
-
             if (Array.isArray(data.path)) data.path = path.resolve(...data.path)
 
             data.path = resolveHomeDir(data.path)
 
-            if (!path.isAbsolute(data.path) && settings.read('remote-root')) data.path =  path.resolve(settings.read('remote-root'), data.path)
+            if (!path.isAbsolute(data.path) && settings.read('remote-root')) data.path = path.resolve(settings.read('remote-root'), data.path)
 
             var root = resolveHomeDir(settings.read('remote-root'))
             if (root && !path.normalize(data.path).includes(path.normalize(root))) {
                 console.error('(ERROR) Could not save: path outside of remote-root')
-                return ipc.send('notify', {
-                    class: 'error',
-                    locale: 'remotesave_fail',
-                    message: ' (Could not save: path outside of remote-root)'
-                }, clientId)
+                return ipc.send(
+                    'notify',
+                    {
+                        class: 'error',
+                        locale: 'remotesave_fail',
+                        message: ' (Could not save: path outside of remote-root)'
+                    },
+                    clientId
+                )
             }
 
             try {
                 JSON.parse(data.session)
-            } catch(e) {
+            } catch (e) {
                 return console.error('(ERROR) Could not save: invalid file')
             }
 
-            fs.writeFile(data.path, data.session, function(err, fdata) {
+            fs.writeFile(data.path, data.session, function (err, fdata) {
+                if (err)
+                    return ipc.send(
+                        'notify',
+                        {
+                            class: 'error',
+                            locale: 'remotesave_fail',
+                            message: ' (' + err.message + ')'
+                        },
+                        clientId
+                    )
 
-                if (err) return ipc.send('notify', {
-                    class: 'error',
-                    locale: 'remotesave_fail',
-                    message: ' (' + err.message + ')'
-                }, clientId)
-
-
-                ipc.send('notify', {
-                    icon: 'save',
-                    locale: 'remotesave_success',
-                    class: 'session-save',
-                    message: ' ('+ path.basename(data.path) +')'
-                }, clientId)
+                ipc.send(
+                    'notify',
+                    {
+                        icon: 'save',
+                        locale: 'remotesave_success',
+                        class: 'session-save',
+                        message: ' (' + path.basename(data.path) + ')'
+                    },
+                    clientId
+                )
 
                 callback()
-
             })
-
         }
-
     },
 
     stateOpen(data, clientId) {
@@ -268,16 +282,17 @@ module.exports =  {
 
         if (Array.isArray(data.path)) data.path = path.resolve(...data.path)
 
-        module.exports.fileRead(data, clientId, true, (result)=>{
-
-            ipc.send('stateLoad', {state: result, path: data.path, send: true}, clientId)
-
-        }, (error)=>{
-
-            ipc.send('error', `Could not open state file:\n ${error}`)
-
-        })
-
+        module.exports.fileRead(
+            data,
+            clientId,
+            true,
+            (result) => {
+                ipc.send('stateLoad', { state: result, path: data.path, send: true }, clientId)
+            },
+            (error) => {
+                ipc.send('error', `Could not open state file:\n ${error}`)
+            }
+        )
     },
 
     sessionSave(data, clientId) {
@@ -288,7 +303,8 @@ module.exports =  {
         if (!path.basename(data.path).match(/.*\.json$/)) return console.error('(ERROR) Sessions must be saved as .json files')
 
         if (data.backup) {
-            var newpath, i = 0
+            var newpath,
+                i = 0
             for (;;) {
                 newpath = data.path.replace(/\.json$/, '-backup' + String(i).padStart(3, 0) + '.json')
                 if (fs.existsSync(newpath)) i++
@@ -299,24 +315,20 @@ module.exports =  {
             }
         }
 
-
-        module.exports.fileSave(data, clientId, true, ()=>{
-
-            console.log('(INFO) Session file saved in '+ data.path)
+        module.exports.fileSave(data, clientId, true, () => {
+            console.log('(INFO) Session file saved in ' + data.path)
 
             if (!data.backup) ipc.send('sessionSaved', clientId)
 
             // reload session in other clients
             for (var id in ipc.clients) {
                 if (id !== clientId && ipc.clients[id].sessionPath === data.path) {
-                    module.exports.sessionOpen({path: data.path}, id)
+                    module.exports.sessionOpen({ path: data.path }, id)
                 }
             }
 
-            if (!data.backup) module.exports.sessionSetPath({path: data.path}, clientId)
-
+            if (!data.backup) module.exports.sessionSetPath({ path: data.path }, clientId)
         })
-
     },
 
     stateSave(data, clientId) {
@@ -326,12 +338,9 @@ module.exports =  {
 
         if (!path.basename(data.path).match(/.*\.state/)) return console.error('(ERROR) Statesaves must be saved as .state files')
 
-        module.exports.fileSave(data, clientId, true, ()=>{
-
-            console.log('(INFO) State file saved in '+ data.path)
-
+        module.exports.fileSave(data, clientId, true, () => {
+            console.log('(INFO) State file saved in ' + data.path)
         })
-
     },
 
     syncOsc(shortdata, clientId) {
@@ -354,8 +363,6 @@ module.exports =  {
         data.args = data.preArgs ? data.preArgs.concat(value) : [value]
 
         if (!data.noSync) ipc.send('receiveOsc', data, null, clientId)
-
-
     },
 
     sendOsc(shortdata, clientId) {
@@ -369,7 +376,6 @@ module.exports =  {
         //             // required if data.h is not provided
         //     }
 
-
         // if widget hash is provided, look for cached data
         if (shortdata.h && !(widgetHashTable[clientId] && widgetHashTable[clientId][shortdata.h])) return
 
@@ -382,7 +388,6 @@ module.exports =  {
         }
 
         if (data.target) {
-
             var targets = []
 
             if (!shortdata.i && settings.read('send') && !shortdata.target) Array.prototype.push.apply(targets, settings.read('send'))
@@ -391,9 +396,8 @@ module.exports =  {
             data.args = data.preArgs ? data.preArgs.concat(value) : [value]
 
             for (var i in targets) {
-
                 if (targets[i] === 'self') {
-                    ipc.send('receiveOsc',data,clientId)
+                    ipc.send('receiveOsc', data, clientId)
                     continue
                 } else if (targets[i] === null) {
                     continue
@@ -403,17 +407,12 @@ module.exports =  {
                     port = targets[i].split(':')[1]
 
                 if (port) {
-
                     osc.send(host, port, data.address, data.args, data.typeTags, clientId)
-
                 }
-
             }
-
         }
 
         if (!data.noSync) ipc.send('receiveOsc', data, null, clientId)
-
     },
 
     addWidget(data, clientId) {
@@ -430,7 +429,7 @@ module.exports =  {
         //     }
         //     preArgs, target and typeTags can be empty strings
 
-        if (!widgetHashTable[clientId][data.hash])  {
+        if (!widgetHashTable[clientId][data.hash]) {
             widgetHashTable[clientId][data.hash] = {}
         }
 
@@ -438,7 +437,7 @@ module.exports =  {
             widgetData = data.data
 
         for (var k in widgetData) {
-            if ((k === 'target' || k === 'preArgs')) {
+            if (k === 'target' || k === 'preArgs') {
                 if (widgetData[k] !== '') {
                     cache[k] = Array.isArray(widgetData[k]) ? widgetData[k] : [widgetData[k]]
                 } else {
@@ -451,20 +450,17 @@ module.exports =  {
 
         // store raw target for client sync widget matching
         cache._rawTarget = widgetData.target
-
     },
 
     removeWidget(data, clientId) {
         // clear widget osc data
 
         delete widgetHashTable[clientId][data.hash]
-
     },
 
     reload(data) {
         // (dev) hot reload
         ipc.send('reload')
-
     },
 
     reloadCss() {
@@ -499,58 +495,60 @@ module.exports =  {
 
         if (root && !path.normalize(p).includes(path.normalize(root))) p = root
 
-
         if (process.platform === 'win32' && !root) {
             // Drive list hack on windows
             if (data.path.length === 2 && data.path[1] === '..' && (data.path[0].match(/^[A-Z]:\\$/) || data.path[0] === '\\')) {
-
                 child_process.exec('wmic logicaldisk get name', (error, stdout) => {
-
                     if (error) {
-
-                        ipc.send('notify', {class: 'error', message: 'Failed to list available drives.'}, clientId)
-
+                        ipc.send('notify', { class: 'error', message: 'Failed to list available drives.' }, clientId)
                     } else {
-
-                        ipc.send('listDir', {
-                            path: '\\',
-                            files: stdout.split('\r\r\n')
-                                .filter(value => /[A-Za-z]:/.test(value))
-                                .map(value => {return {name: value.trim(), folder: true}})
-                        }, clientId)
-
+                        ipc.send(
+                            'listDir',
+                            {
+                                path: '\\',
+                                files: stdout
+                                    .split('\r\r\n')
+                                    .filter((value) => /[A-Za-z]:/.test(value))
+                                    .map((value) => {
+                                        return { name: value.trim(), folder: true }
+                                    })
+                            },
+                            clientId
+                        )
                     }
                 })
                 return
             }
         }
 
-        fs.readdir(p, (err, files)=>{
+        fs.readdir(p, (err, files) => {
             if (err) {
-                ipc.send('notify', {class: 'error', message: err.message}, clientId)
+                ipc.send('notify', { class: 'error', message: err.message }, clientId)
                 throw err
             } else {
                 var extRe = data.extension ? new RegExp('.*\\.' + data.extension + '$') : /.*/
-                var list = files.filter(x=>x[0] !== '.').map((x)=>{
-                    var folder = false
-                    try {
-                        folder = fs.statSync(path.resolve(p, x)).isDirectory()
-                    } catch(e) {}
-                    return {
-                        name: x,
-                        folder
-                    }
-                })
-                list = list.filter(x=>x.folder || x.name.match(extRe))
-                ipc.send('listDir', {
-                    path: p,
-                    files: list
-                }, clientId)
+                var list = files
+                    .filter((x) => x[0] !== '.')
+                    .map((x) => {
+                        var folder = false
+                        try {
+                            folder = fs.statSync(path.resolve(p, x)).isDirectory()
+                        } catch (e) {}
+                        return {
+                            name: x,
+                            folder
+                        }
+                    })
+                list = list.filter((x) => x.folder || x.name.match(extRe))
+                ipc.send(
+                    'listDir',
+                    {
+                        path: p,
+                        files: list
+                    },
+                    clientId
+                )
             }
         })
-
-
-    },
-
-
+    }
 }

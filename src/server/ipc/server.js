@@ -22,7 +22,7 @@ class Ipc extends EventEmitter {
 
             if (settings.read('authentication')) {
                 if (settings.read('authentication') !== Buffer.from(auth, 'base64').toString()) {
-                    console.log(`(WARNING) Client connexion refused for ${req.connection.remoteAddress} (authentication failed)`)
+                    console.log(`(WARNING) Client connection refused for ${req.connection.remoteAddress} (authentication failed)`)
                     socket.close()
                     return
                 }
