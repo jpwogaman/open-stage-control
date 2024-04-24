@@ -45,8 +45,8 @@ var SessionManager = class SessionManager extends EventEmitter {
 
         setTimeout(()=>{
             try {
-
-                uiConsole.clear()
+                //uiConsole.clear()
+                console.log('EVERYTHING ABOVE THIS WILL BE CLEARED IN CLIENT CONSOLE')
                 this.session = new Session(session, 'session')
                 container.innerHTML = ''
                 parser.reset()
@@ -59,12 +59,11 @@ var SessionManager = class SessionManager extends EventEmitter {
                 editor.widgetTree.filter.value = ''
                 DOM.get(document, '#osc-greeting-header')[0].classList.add('hidden')
                 this.setSaveMode(this.session.isFragment ? 'fragment' : 'session')
-
             } catch (err) {
                 uiLoading(false)
-                new UiModal({title: locales('session_parsingerror'), content: err.message, icon: 'exclamation-triangle', closable:true})
+                new UiModal({ title: locales('session_parsingerror'), content: err.message, icon: 'exclamation-triangle', closable: true })
                 this.lock = false
-                ipc.send('sessionSetPath', {path: this.sessionPath})
+                ipc.send('sessionSetPath', { path: this.sessionPath })
                 throw err
             }
 
@@ -86,14 +85,13 @@ var SessionManager = class SessionManager extends EventEmitter {
 
             DOM.dispatchEvent(window, 'resize')
 
-            setTimeout(()=>{
+            setTimeout(() => {
                 uiLoading(false)
                 this.lock = false
                 editor.unsavedSession = false
                 this.setSessionPath('')
                 if (callback) callback()
             }, 25)
-
         }, 25)
 
     }

@@ -46,10 +46,6 @@ module.exports = {
     stateLoad: function (data) {
         state.load(data.state, data.send, data.path)
     },
-    cubaseKeys: function () {
-        ipc.send('log', 'cubaseKeys')
-    },
-
     stateSend: function () {
         if (!CLIENT_SYNC) return
 
@@ -65,7 +61,6 @@ module.exports = {
             osc.syncOnly = false
         }, 200)
     },
-
     editorDisable: function (data) {
         editor.disable(data.permanent)
     },

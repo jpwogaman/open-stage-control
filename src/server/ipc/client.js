@@ -5,9 +5,7 @@ var hearbeatInterval = 25000,
     dieTimeout = 60000
 
 class Socket extends EventEmitter {
-
     constructor(ws, id, address) {
-
         super()
 
         this.id = id
@@ -22,105 +20,86 @@ class Socket extends EventEmitter {
 
         this.hearbeat = undefined
         this.hearbeatTimeout = undefined
-        this.on('pong', ()=>{
+        this.on('pong', () => {
             this.hearbeatTimeout = clearTimeout(this.hearbeatTimeout)
         })
-        this.on('ping', ()=>{
+        this.on('ping', () => {
             this.socket.send('["pong"]')
         })
 
         this.dieTimeout = undefined
 
         this.open(ws)
-
     }
 
     open(ws) {
-
         this.socket = ws
 
-        this.socket.onmessage = (e)=>{
+        this.socket.onmessage = (e) => {
             this.receive(e.data)
         }
 
-        this.socket.onclose = this.socket.onerror = ()=>{
+        this.socket.onclose = this.socket.onerror = () => {
             if (!this.connected()) this.close()
         }
 
         this.dieTimeout = clearTimeout(this.dieTimeout)
 
-        this.hearbeat = setInterval(()=>{
+        this.hearbeat = setInterval(() => {
             if (!this.connected()) return
             this.socket.send('["ping"]')
-            this.hearbeatTimeout = setTimeout(()=>{
+            this.hearbeatTimeout = setTimeout(() => {
                 if (this.connected()) this.socket.close()
             }, hearbeatTimeout)
         }, hearbeatInterval)
 
         this.emit('created')
-
     }
 
     close() {
-
         this.hearbeat = clearInterval(this.hearbeat)
         this.hearbeatTimeout = clearTimeout(this.hearbeatTimeout)
         this.dieTimeout = clearTimeout(this.dieTimeout)
 
-        this.dieTimeout = setTimeout(()=>{
-
+        this.dieTimeout = setTimeout(() => {
             this.emit('destroyed')
-
         }, dieTimeout)
-
     }
 
     connected() {
-
         return this.socket.readyState == this.socket.OPEN
-
     }
 
     receive(message) {
-
         if (typeof message == 'string') {
-
             var packet = JSON.parse(message)
 
             if (Array.isArray(packet) && typeof packet[0] == 'string') {
-
                 this.emit(packet[0], packet[1])
-
             }
-
         }
-
     }
 
     send(event, data) {
-
         var packet = JSON.stringify([event, data])
 
         if (this.connected()) {
+            //logs to both the LAUNCHER console and any CMD line or terminal consoles that are running the server
+            //console.log('event === ' + event + ' || src/SERVER/ipc/client.js: this.connected() === true')
             this.socket.send(packet)
         } else {
+            //console.log('event === ' + event + ' || src/SERVER/ipc/client.js: this.connected() === false')
             this.queue.push(packet)
         }
-
     }
 
-    flush(){
-
+    flush() {
         for (var i in this.queue) {
-
             if (this.connected()) this.socket.send(this.queue[i])
-
         }
 
         this.queue = []
-
     }
-
 }
 
 module.exports = Socket

@@ -25,21 +25,18 @@ const HISTORY_SIZE = 50
 class Editor {
 
     constructor() {
-
-        this.inspector = new UiInspector({selector: '#osc-inspector'})
-        this.inspector.on('update', (event)=>{
-
-            var {propName, value, preventHistory} = event,
+        this.inspector = new UiInspector({ selector: '#osc-inspector' })
+        this.inspector.on('update', (event) => {
+            var { propName, value, preventHistory } = event,
                 newWidgets = [],
                 error = false
 
-            if (this.selectedWidgets.some(w=>w.getProp('lock')) && propName !== 'lock') {
+            if (this.selectedWidgets.some((w) => w.getProp('lock')) && propName !== 'lock') {
                 this.select(this.selectedWidgets)
                 return
             }
 
             for (var w of this.selectedWidgets) {
-
                 let previousValue = w.props[propName]
 
                 if ((propName === 'label' || propName === 'popupLabel') && value === true) {
@@ -49,23 +46,21 @@ class Editor {
                 }
 
                 try {
-
-                    newWidgets.push(updateWidget(w, {changedProps: [propName], preventSelect: this.selectedWidgets.length > 1}))
-
+                    newWidgets.push(updateWidget(w, { changedProps: [propName], preventSelect: this.selectedWidgets.length > 1 }))
                 } catch (e) {
-
                     w.props[propName] = previousValue
-                    updateWidget(w, {changedProps: [propName], preventSelect: this.selectedWidgets.length > 1})
+                    updateWidget(w, { changedProps: [propName], preventSelect: this.selectedWidgets.length > 1 })
 
-                    if (uiConsole.minimized) notifications.add({
-                        class: 'error',
-                        message: locales('inspector_error'),
-                        duration: 7000
-                    })
+                    if (uiConsole.minimized)
+                        notifications.add({
+                            class: 'error',
+                            message: locales('inspector_error'),
+                            duration: 7000
+                        })
                     console.error(
                         `Error while setting ${propName} to: ${JSON.stringify(value)}.\n` +
-                        'It\'s probably a bug, please open a new bug ticket with the following informations at' +
-                        'https://github.com/jean-emmanuel/open-stage-control/issues'
+                            "It's probably a bug, please open a new bug ticket with the following informations at" +
+                            'https://github.com/jean-emmanuel/open-stage-control/issues'
                     )
                     throw e
                     // console.error(e)
@@ -78,19 +73,15 @@ class Editor {
             if (!preventHistory) this.pushHistory()
 
             if (newWidgets.length > 1) this.select(newWidgets)
-
         })
 
-
-        this.widgetTree = new UiTree({selector: '#osc-tree', parent: leftUiSidePanel})
-        this.widgetTree.on('sorted', (event)=>{
-
-            var {oldIndex, newIndex, from, to} = event,
+        this.widgetTree = new UiTree({ selector: '#osc-tree', parent: leftUiSidePanel })
+        this.widgetTree.on('sorted', (event) => {
+            var { oldIndex, newIndex, from, to } = event,
                 propName = from.childrenType + 's',
                 container
 
             if (from === to) {
-
                 if (to.props[propName].length < 2) return
 
                 to.props[propName].splice(newIndex, 0, to.props[propName].splice(oldIndex, 1)[0])
@@ -102,37 +93,30 @@ class Editor {
                     }
                 }
 
-                container = updateWidget(to, {removedIndexes: indices, addedIndexes: indices, preventSelect: true})
+                container = updateWidget(to, { removedIndexes: indices, addedIndexes: indices, preventSelect: true })
 
-                this.pushHistory({removedIndexes: indices, addedIndexes: indices})
+                this.pushHistory({ removedIndexes: indices, addedIndexes: indices })
                 this.select(container.children[newIndex])
-
             } else {
-
                 to.props[propName].splice(newIndex, 0, from.props[propName][oldIndex])
                 from.props[propName].splice(oldIndex, 1)
 
-                updateWidget(from, {removedIndexes: [oldIndex], preventSelect: true})
-                container = updateWidget(to, {addedIndexes: [newIndex], preventSelect: true})
+                updateWidget(from, { removedIndexes: [oldIndex], preventSelect: true })
+                container = updateWidget(to, { addedIndexes: [newIndex], preventSelect: true })
 
                 this.pushHistory()
                 this.select(container.children[newIndex])
-
             }
 
             if (!event.ignoreTree) this.widgetTree.showWidget(container.children[newIndex])
-
-
         })
 
         this.oscContainer = DOM.get('#osc-container')[0]
 
-
-
         this.widgetDragResize = new UiDragResize({})
-        this.widgetDragResize.on('move', (e)=>{
-            var left  =  Math.round(e.left / GRIDWIDTH) * GRIDWIDTH,
-                top  =  Math.round(e.top / GRIDWIDTH) * GRIDWIDTH
+        this.widgetDragResize.on('move', (e) => {
+            var left = Math.round(e.left / GRIDWIDTH) * GRIDWIDTH,
+                top = Math.round(e.top / GRIDWIDTH) * GRIDWIDTH
 
             if (e.copying) {
                 this.duplicateWidget(left, top, e.shiftKey)
@@ -142,9 +126,9 @@ class Editor {
                 this.moveWidget(dX, dY)
             }
         })
-        this.widgetDragResize.on('drag-resize', (e)=>{
-            var width  =  Math.round(e.width / GRIDWIDTH) * GRIDWIDTH,
-                height  =  Math.round(e.height / GRIDWIDTH) * GRIDWIDTH
+        this.widgetDragResize.on('drag-resize', (e) => {
+            var width = Math.round(e.width / GRIDWIDTH) * GRIDWIDTH,
+                height = Math.round(e.height / GRIDWIDTH) * GRIDWIDTH
             var dX = width - e.initWidth,
                 dY = height - e.initHeight
             this.resizeWidget(dX, dY)
@@ -155,18 +139,20 @@ class Editor {
         this.clipboard = null
         this.tmpClipboard = null
         this.idClipboard = null
-        ipc.on('clipboard', (data)=>{
+        ipc.on('clipboard', (data) => {
             this.clipboard = data.clipboard
             this.idClipboard = data.idClipboard
         })
 
         this.usePercents = !!ENV.usepercents
 
-        this.enabled = false
+        //this.enabled = false
+        this.enabled = true
+
         this.grid = true
 
         this.unsavedSession = false
-        window.onbeforeunload = ()=>{
+        window.onbeforeunload = () => {
             if (editor.unsavedSession) return true
         }
 
@@ -178,8 +164,7 @@ class Editor {
         this.mouveMoveHandler = this.mouseMove.bind(this)
         this.mouveLeaveHandler = this.mouseLeave.bind(this)
 
-        keyboardJS.withContext('editing', ()=>{
-
+        keyboardJS.withContext('editing', () => {
             var combos = [
                 'mod + z',
                 'mod + y',
@@ -215,31 +200,30 @@ class Editor {
             ]
 
             for (let c of combos) {
-                keyboardJS.bind(c, (e)=>{
-                    e.catchedByEditor = true
-                    this.handleKeydown(c, e)
-                }, (e)=>{
-                    e.catchedByEditor = true
-                    this.handleKeyup(c, e)
-                })
+                keyboardJS.bind(
+                    c,
+                    (e) => {
+                        e.catchedByEditor = true
+                        this.handleKeydown(c, e)
+                    },
+                    (e) => {
+                        e.catchedByEditor = true
+                        this.handleKeyup(c, e)
+                    }
+                )
             }
-
         })
 
-        this.selectarea = new UiSelectArea('[data-widget]:not(.not-editable)', (elements, e)=>{
-
-            var widgets = elements.map(e => widgetManager.getWidgetByElement(e, ':not(.not-editable)')).filter(e => e)
+        this.selectarea = new UiSelectArea('[data-widget]:not(.not-editable)', (elements, e) => {
+            var widgets = elements.map((e) => widgetManager.getWidgetByElement(e, ':not(.not-editable)')).filter((e) => e)
 
             if (e.ctrlKey) {
-
                 // only add siblings to current selection
 
                 for (var i in widgets) {
-                    this.select(widgets[i], {multi:true, fromLasso:true, lassoEnd: i == widgets.length - 1})
+                    this.select(widgets[i], { multi: true, fromLasso: true, lassoEnd: i == widgets.length - 1 })
                 }
-
             } else {
-
                 // select the largest group of siblings in area
 
                 var groups = {}
@@ -255,20 +239,15 @@ class Editor {
                 // if the event started from a container widget (but not in the project tree)
                 // remove groups that are more than one level away from that container
                 if (e.target.tagName !== 'LI' && this.selectedWidgets[0].childrenType !== undefined) {
-                    groups = groups.filter(g=>g[0].parent === this.selectedWidgets[0] || g[0].parent === this.selectedWidgets[0].parent)
+                    groups = groups.filter((g) => g[0].parent === this.selectedWidgets[0] || g[0].parent === this.selectedWidgets[0].parent)
                 }
 
-                var lengths = groups.map(g=>g.length),
+                var lengths = groups.map((g) => g.length),
                     selection = groups[lengths.lastIndexOf(Math.max(...lengths))]
 
                 if (selection) this.select(selection)
             }
-
-
-
         })
-
-
     }
 
     handleKeydown(combo, e){

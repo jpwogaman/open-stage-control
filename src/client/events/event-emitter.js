@@ -49,9 +49,7 @@ module.exports = class EventEmitter {
     }
 
     on(evt, listener, options) {
-
         if (options) {
-
             // Custom event setup
             if (has.call(customEvents, evt)) {
                 this._customBindings[evt]
@@ -64,7 +62,6 @@ module.exports = class EventEmitter {
 
             // Context storing
             if (options.context) listener._context = options.context
-
         }
 
         // Add listener
@@ -75,7 +72,6 @@ module.exports = class EventEmitter {
         if (listeners.indexOf(listener) === -1) listeners.push(listener)
 
         return this
-
     }
 
     off(evt, listener, context) {

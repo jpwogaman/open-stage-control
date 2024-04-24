@@ -169,8 +169,11 @@ class Ipc extends EventEmitter {
         var packet = JSON.stringify([event, data])
 
         if (this.connected()) {
+            //logs to the client/editor console only
+            //console.log('event === ' + event + ' || src/CLIENT/ipc/index.js: this.connected() === true')
             this.socket.send(packet)
         } else {
+            //console.log('event === ' + event + ' || src/CLIENT/ipc/index.js: this.connected() === false')
             this.queue.push(packet)
         }
 

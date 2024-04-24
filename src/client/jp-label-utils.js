@@ -1,68 +1,82 @@
 //const test = KEYS
 const ipc = require('./ipc/')
 
-ipc.on('cubaseKeys', ipc.send('log', 'cubaseKeys'))
+let exportData
 
-const parsed = {
-    Categories: [
-        {
-            Name: 'AddTrack',
-            Commands: [
-                {
-                    Name: 'Arranger',
-                    Key: ''
-                }
-            ]
-        },
-        {
-            Name: 'Audio',
-            Commands: [
-                {
-                    Name: 'Adjust Fades to Range',
-                    Key: 'A'
-                }
-            ]
-        },
-        {
-            Name: 'Macro',
-            Commands: [
-                {
-                    Name: 'Duplicate Selected Tracks without Data',
-                    Key: ''
-                }
-            ]
-        }
-    ],
-    Macros: [
-        {
-            Name: 'Duplicate Selected Tracks without Data',
-            Subcommands: [
-                {
-                    Category: 'Project',
-                    Name: 'Duplicate Tracks'
-                },
-                {
-                    Category: 'Automation',
-                    Name: 'Delete Automation of Selected Tracks'
-                },
-                {
-                    Category: 'TrackVersions',
-                    Name: 'Delete Inactive Versions of Selected Tracks'
-                },
-                {
-                    Category: 'Edit',
-                    Name: 'Select All on Tracks'
-                },
-                {
-                    Category: 'Edit',
-                    Name: 'Delete'
-                }
-            ]
-        }
-    ]
-}
+//ipc.on('cubaseKeys', (data) => {
+//    //data type === { path: data.path, fileContent: result }
+//    exportData = data.fileContent
+//    ipc.send('log', 'exportData1')
+//})
+
+//this is logging to the Launcher/Server console
+//ipc.send('log', 'cubaseKeys-CLIENT')
+//this is logging to the client console ONLY IF you comment out the uiConsole.clear() in src\client\managers\session\index.js
+//console.log('cubaseKeys-CLIENT')
+//const example = {
+//    Categories: [
+//        {
+//            Name: 'AddTrack',
+//            Commands: [
+//                {
+//                    Name: 'Arranger',
+//                    Key: ''
+//                }
+//            ]
+//        },
+//        {
+//            Name: 'Audio',
+//            Commands: [
+//                {
+//                    Name: 'Adjust Fades to Range',
+//                    Key: 'A'
+//                }
+//            ]
+//        },
+//        {
+//            Name: 'Macro',
+//            Commands: [
+//                {
+//                    Name: 'Duplicate Selected Tracks without Data',
+//                    Key: ''
+//                }
+//            ]
+//        }
+//    ],
+//    Macros: [
+//        {
+//            Name: 'Duplicate Selected Tracks without Data',
+//            Subcommands: [
+//                {
+//                    Category: 'Project',
+//                    Name: 'Duplicate Tracks'
+//                },
+//                {
+//                    Category: 'Automation',
+//                    Name: 'Delete Automation of Selected Tracks'
+//                },
+//                {
+//                    Category: 'TrackVersions',
+//                    Name: 'Delete Inactive Versions of Selected Tracks'
+//                },
+//                {
+//                    Category: 'Edit',
+//                    Name: 'Select All on Tracks'
+//                },
+//                {
+//                    Category: 'Edit',
+//                    Name: 'Delete'
+//                }
+//            ]
+//        }
+//    ]
+//}
 
 const parsedToArray = (parsed) => {
+    if (exportData === undefined) {
+        return ['No Data 2']
+    }
+
     const keyCommands = []
 
     const macroList = []
@@ -97,5 +111,7 @@ const parsedToArray = (parsed) => {
 }
 
 module.exports = {
-    keyCommands: parsedToArray(parsed)
+    keyCommands: function (parsed) {
+        parsedToArray(parsed)
+    }
 }

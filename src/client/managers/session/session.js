@@ -3,51 +3,35 @@ var semver = require('semver'),
     locales = require('../../locales')
 
 class Session {
-
     constructor(data, type) {
-
         if (data === null) {
-
             data = {
-                content: {type: 'root'}
+                content: { type: 'root' }
             }
-
-
         } else {
-
             var version = data.version || '0.0.0',
                 warning = false
 
             for (var converter of converters) {
-
                 if (semver.lte(version, converter.version)) {
-
                     if (converter.global) data = converter.global(data)
                     if (converter.widget) this.applyConvert(data.session || data.content, converter.widget)
 
                     if (converter.warning && type !== 'fragment') warning = true
-
                 }
-
             }
-
 
             if (warning) {
-
-                new UiModal({title: locales('session_oldversion_title'), content: locales('session_oldversion'), icon: 'exclamation-triangle', closable:true})
-
+                new UiModal({ title: locales('session_oldversion_title'), content: locales('session_oldversion'), icon: 'exclamation-triangle', closable: true })
             }
-
         }
-
-
 
         if (type === 'session' && data.type === 'fragment') {
             // opening fragment as a session
             if (data.content.type === 'tab') {
-                data.content = {type: 'root', tabs: [data.content]}
+                data.content = { type: 'root', tabs: [data.content] }
             } else {
-                data.content = {type: 'root', widgets: [data.content]}
+                data.content = { type: 'root', widgets: [data.content] }
             }
             this.isFragment = true
         }
@@ -67,11 +51,9 @@ class Session {
         data.content = c
 
         this.data = data
-
     }
 
     applyConvert(data, convert) {
-
         convert(data)
 
         if (data.widgets) {
@@ -85,37 +67,29 @@ class Session {
                 this.applyConvert(c, convert)
             }
         }
-
     }
 
     getRoot() {
-
         return this.data.content
-
     }
 
     toJSON() {
-
         return JSON.stringify(this.data, null, '  ')
-
     }
-
 }
 
 var converters = [
     {
         version: '0.49.12',
         warning: true,
-        global: (data)=>{
-
+        global: (data) => {
             if (Array.isArray(data)) data = data[0]
 
             return {
                 session: data
             }
         },
-        widget: (data)=>{
-
+        widget: (data) => {
             data.decimals = data.precision
 
             if (data.precision === 0) {
@@ -125,7 +99,6 @@ var converters = [
             if (data.color !== 'auto') data.colorWidget = data.color
 
             switch (data.type) {
-
                 case 'toggle':
                     data.type = 'button'
                     data.mode = 'toggle'
@@ -145,7 +118,6 @@ var converters = [
                     data.design = 'compact'
                     data.interaction = false
                     break
-
 
                 case 'tab':
                 case 'panel':
@@ -170,14 +142,11 @@ var converters = [
                     break
 
                 case 'matrix':
-
-
                     data.layout = 'grid'
-                    if (Array.isArray(data.matrix) && data.matrix.every(x=>typeof x === 'number')) {
+                    if (Array.isArray(data.matrix) && data.matrix.every((x) => typeof x === 'number')) {
                         data.quantity = data.matrix[0] * data.matrix[1]
                         data.gridTemplate = data.matrix[0]
                     }
-
 
                     var oprops = typeof data.props === 'object' && data.props !== null
 
@@ -224,32 +193,37 @@ var converters = [
                     data.script = `
                         // converted from keys widget data
                         if (type === 'keyup') {
-                            ${String(data.keyUp).trim().replace(/JS\{\{(.*)\}\}/s, '$1').trim()}
+                            ${String(data.keyUp)
+                                .trim()
+                                .replace(/JS\{\{(.*)\}\}/s, '$1')
+                                .trim()}
                         } else if (type === 'keydown') {
-                            ${String(data.keyDown).trim().replace(/JS\{\{(.*)\}\}/s, '$1').trim()}
+                            ${String(data.keyDown)
+                                .trim()
+                                .replace(/JS\{\{(.*)\}\}/s, '$1')
+                                .trim()}
                         }
                     `
                     break
                 case 'script':
-                    data.script = String(data.script).trim().replace(/JS\{\{(.*)\}\}/s, '$1').trim()
+                    data.script = String(data.script)
+                        .trim()
+                        .replace(/JS\{\{(.*)\}\}/s, '$1')
+                        .trim()
                     break
-
             }
 
-            var label = data.label === undefined ?  'auto' : data.label
+            var label = data.label === undefined ? 'auto' : data.label
             if (label !== false && data.type && data.type && !data.type.match(/button|menu|modal|clone|html|tab/)) {
                 label = label === 'auto' ? '@{this.id}' : label
                 data.html = label
             }
-
         }
     },
     {
         version: '1.3.0',
-        widget: (data)=>{
-
+        widget: (data) => {
             switch (data.type) {
-
                 case 'fader':
                 case 'knob':
                 case 'xy':
@@ -261,37 +235,30 @@ var converters = [
                         data.script = `\nif (touch !== undefined) {\n // generated automatically\n // from touchAddress\n var address = "${data.touchAddress}"\n ${sendScript}\n}${originalScript}`
                     }
                     break
-
             }
-
         }
     },
     {
         version: '1.6.2',
-        widget: (data)=>{
-
+        widget: (data) => {
             if (data.script && String(data.script).includes('toolbar(')) {
                 // new "console" submenu in toolbar at index 3
                 data.script = String(data.script).replace('toolbar(4)', 'toolbar(5)').replace('toolbar(3)', 'toolbar(4)')
             }
-
         }
     },
     {
         version: '1.8.15',
-        global: (data)=>{
-
+        global: (data) => {
             data.content = data.session
             delete data.session
             return data
-
         }
     },
     {
         version: '1.13.2',
         warning: true,
-        widget: (data)=>{
-
+        widget: (data) => {
             if (data.script !== undefined) {
                 if (data.type === 'script') {
                     if (data.event === 'once') {
@@ -309,16 +276,14 @@ var converters = [
                 if (data.draw !== undefined) data.onDraw = data.draw
                 if (data.touch !== undefined) data.onTouch = data.touch
             }
-
         }
     },
     {
         version: '1.23.0',
-        widget: (data)=>{
+        widget: (data) => {
             if (data.type === 'patchbay' && data.exclusive === true) {
                 data.exclusive = 'in'
-            }
-            else if ((data.type === 'panel' || data.type === 'root') && data.verticalTabs === true) {
+            } else if ((data.type === 'panel' || data.type === 'root') && data.verticalTabs === true) {
                 data.tabsPosition = 'left'
                 delete data.verticalTabs
             }
@@ -326,7 +291,7 @@ var converters = [
     },
     {
         version: '1.24.2',
-        widget: (data)=>{
+        widget: (data) => {
             if (data.type === 'menu') {
                 if (data.toggle) {
                     data.mode = data.doubleTap ? 'toggle' : 'doubleTap-toggle'

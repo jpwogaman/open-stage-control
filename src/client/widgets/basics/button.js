@@ -4,9 +4,28 @@ var Widget = require('../common/widget'),
     { deepEqual, isJSON } = require('../../utils'),
     { iconify } = require('../../ui/utils'),
     parser = require('../../parser'),
+    ipc = require('../../ipc/'),
     labelUtils = require('../../jp-label-utils')
 
-const parsed = labelUtils.keyCommands
+let parsed = () => {
+    let newParsed = []
+
+    let tryThis
+    ipc.send('cubaseKeysCLIENT')
+
+    ipc.on('cubaseKeys', (data) => {
+        //data type === { path: data.path, fileContent: result }
+
+        ipc.send('log', 'exportData1')
+        ipc.send('log', data.path)
+        tryThis = data.fileContent
+    })
+    setTimeout(() => {
+        //const labelUtils = require('../../jp-label-utils')
+        newParsed = tryThis
+    }, 4000)
+    return newParsed
+}
 
 class Button extends Widget {
     static description() {
@@ -18,7 +37,7 @@ class Button extends Widget {
             style: {
                 _separator_button_style: 'Button style',
                 colorTextOn: { type: 'string', value: 'auto', help: "Defines the widget's text color when active." },
-                label2: { type: 'string', value: '', choices: parsed, help: [''] },
+                label2: { type: 'string', value: '', choices: parsed(), help: [''] },
                 label: {
                     type: 'string|boolean',
                     value: 'auto',

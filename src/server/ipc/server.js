@@ -4,19 +4,16 @@ var EventEmitter = require('events').EventEmitter,
     settings = require('../settings')
 
 class Ipc extends EventEmitter {
-
     constructor(server) {
-
         super()
 
         this.clients = {}
         this.server = null
 
-        this.server = new WebSocketServer({server: server})
+        this.server = new WebSocketServer({ server: server })
 
-        this.server.on('connection', (socket, req)=>{
-
-            var url  = req.url.split('/'),
+        this.server.on('connection', (socket, req) => {
+            var url = req.url.split('/'),
                 auth = url.pop().replace('_', '/'),
                 id = url.pop()
 
@@ -28,37 +25,29 @@ class Ipc extends EventEmitter {
                 }
             }
 
-
             if (!id) return
 
             id = decodeURI(id)
 
             if (!this.clients[id]) {
-
                 var client = new Client(socket, id, req.connection.remoteAddress)
                 this.clients[id] = client
 
                 this.emit('connection', client)
 
-                client.on('destroyed', ()=>{
+                client.on('destroyed', () => {
                     delete this.clients[id]
                 })
-
             } else {
-
                 this.clients[id].open(socket)
                 this.clients[id].flush()
-
             }
 
             this.clients[id].emit('created')
-
         })
-
     }
 
     send(event, data, id, except) {
-
         var clients = id ? [this.clients[id]] : this.clients
 
         for (var k in clients) {
@@ -66,10 +55,7 @@ class Ipc extends EventEmitter {
                 if (clients[k]) clients[k].send(event, data)
             }
         }
-
     }
-
-
 }
 
 module.exports = Ipc

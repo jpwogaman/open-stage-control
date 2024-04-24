@@ -23,18 +23,38 @@ module.exports = {
         ipc.send('serverTargets', settings.read('send'), clientId)
 
         if (settings.read('load') && !data.hotReload) {
-            return this.sessionOpen({ path: settings.read('load') }, clientId)
+            this.sessionOpen({ path: settings.read('load') }, clientId)
         }
 
-        if (settings.read('cubase-keys') && !data.hotReload) {
-            return this.keyCommandsToClient({ path: settings.read('cubase-keys') }, clientId)
-        }
+        //if (settings.read('cubase-keys') && !data.hotReload) {
+        //    this.keyCommandsToClient({ path: settings.read('cubase-keys') }, clientId)
+        //}
     },
 
     close(data, clientId) {
         // client disconnected
     },
+    cubaseKeysCLIENT() {
+        if (settings.read('cubase-keys')) {
+            this.keyCommandsToClient({ path: settings.read('cubase-keys') })
+        }
+        console.log('cubaseKeysCLIENT')
+    },
+    keyCommandsToClient(data, clientId) {
+        if (Array.isArray(data.path)) data.path = path.resolve(...data.path)
 
+        module.exports.fileRead(
+            data,
+            clientId,
+            true,
+            (result) => {
+                ipc.send('cubaseKeys', { path: data.path, fileContent: result })
+            },
+            (error) => {
+                ipc.send('error', `Could not open Cubase Key Commands file:\n ${error}`)
+            }
+        )
+    },
     created(data, clientId) {
         // client created or reconnected
 
@@ -118,21 +138,6 @@ module.exports = {
             },
             (error) => {
                 ipc.send('error', `Could not open session file:\n ${error}`)
-            }
-        )
-    },
-    keyCommandsToClient(data, clientId) {
-        if (Array.isArray(data.path)) data.path = path.resolve(...data.path)
-
-        module.exports.fileRead(
-            data,
-            clientId,
-            true,
-            (result) => {
-                ipc.send('cubaseKeys', { path: data.path, fileContent: result }, clientId)
-            },
-            (error) => {
-                ipc.send('error', `Could not open Cubase Key Commands file:\n ${error}`)
             }
         )
     },
